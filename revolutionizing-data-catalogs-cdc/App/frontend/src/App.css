@@ -1,0 +1,168 @@
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #eef2f7;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Container */
+  .container {
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+  }
+  
+  /* Headings */
+  h1, h2, h3 {
+    color: #333;
+  }
+  
+  /* Filter Info */
+  .filter-info {
+    background: #f7f7f7;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .filter-info button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  /* Form Styles */
+  .form-container {
+    margin-bottom: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .form-group textarea {
+    resize: vertical;
+  }
+  
+  .form-actions {
+    margin-top: 10px;
+  }
+  
+  .form-actions button {
+    margin-right: 10px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .form-actions button[type="submit"] {
+    background-color: #28a745;
+    color: #fff;
+  }
+  
+  .form-actions button[type="button"] {
+    background-color: #6c757d;
+    color: #fff;
+  }
+  
+  /* Item Grid and Card Styles */
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  
+  .item-card {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  }
+  
+  .item-card h3 {
+    margin-top: 0;
+    color: #007bff;
+  }
+  
+  .item-card p {
+    color: #555;
+  }
+  
+  .item-category, .item-tags {
+    margin-top: 10px;
+  }
+  
+  .clickable {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .item-tags .tag {
+    display: inline-block;
+    background-color: #f0f0f0;
+    padding: 4px 8px;
+    margin-right: 5px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  
+  .item-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .item-actions button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .item-actions button:first-child {
+    background-color: #ffc107;
+    color: #fff;
+  }
+  
+  .item-actions button:last-child {
+    background-color: #dc3545;
+    color: #fff;
+  }
+  

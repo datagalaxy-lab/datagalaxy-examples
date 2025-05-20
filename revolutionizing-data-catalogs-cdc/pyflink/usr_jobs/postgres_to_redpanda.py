@@ -1,0 +1,160 @@
+from pyflink.table import EnvironmentSettings, TableEnvironment
+import os
+import json
+from pyflink.table import EnvironmentSettings, TableEnvironment, DataTypes
+from pyflink.table.expressions import col, call
+from pyflink.table.udf import udtf
+from pyflink.table import expressions as expr
+from pyflink.table.window import Tumble
+from pyflink.table import DataTypes
+from pyflink.table.udf import udf
+from pyflink.common import Configuration
+
+import logging
+
+# Set up logging for your PyFlink job
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+
+# Create a batch TableEnvironment
+env_settings = EnvironmentSettings.in_streaming_mode()
+table_env = TableEnvironment.create(env_settings)
+
+# Get the current working directory
+CURRENT_DIR = os.getcwd()
+
+# Define a list of JAR file names you want to add
+jar_files = [
+    "flink-sql-connector-postgres-cdc-3.0.1.jar",
+    "flink-sql-connector-kafka-3.4.0-1.20.jar"
+]
+
+root_dir_list = __file__.split("/")[:-2]
+root_dir = "/".join(root_dir_list)
+
+# Build the list of JAR URLs by prepending 'file:///' to each file name
+jar_urls = [f"file://{root_dir}/lib/{jar_file}" for jar_file in jar_files]
+
+table_env.get_config().get_configuration().set_string(
+    "pipeline.jars",
+    ";".join(jar_urls)
+)
+
+config = Configuration()
+config.set_string("parallelism.default", "2")
+table_env.get_config().add_configuration(config)
+# Définition de la table source PostgreSQL via CDC
+table_env.execute_sql("""
+        CREATE TABLE catalog_item (
+            id INT,
+            name STRING,
+            description STRING,
+            category_id STRING,
+            last_updated TIMESTAMP(3),
+            db_name STRING METADATA FROM 'database_name' VIRTUAL,
+            schema_name STRING METADATA FROM 'schema_name' VIRTUAL,
+            table_name STRING METADATA FROM 'table_name' VIRTUAL,
+            operation_ts TIMESTAMP_LTZ(3) METADATA FROM 'op_ts' VIRTUAL,
+            PRIMARY KEY (id) NOT ENFORCED
+        ) WITH (
+            'connector' = 'postgres-cdc',
+            'hostname' = 'db.data-catalog-app.svc.cluster.local',
+            'port' = '5432',
+            'username' = 'postgres',
+            'password' = 'postgres',
+            'database-name' = 'catalogdb',
+            'schema-name' = 'public',
+            'table-name' = 'catalog_item',
+            'slot.name' = 'data_catalog_slot',
+            'decoding.plugin.name' = 'pgoutput'
+        );
+    """)
+
+# Définition de la table source PostgreSQL via CDC
+table_env.execute_sql("""
+        CREATE TABLE category (
+            id INT,
+            name STRING,
+            description STRING,
+            db_name STRING METADATA FROM 'database_name' VIRTUAL,
+            schema_name STRING METADATA FROM 'schema_name' VIRTUAL,
+            table_name STRING METADATA FROM 'table_name' VIRTUAL,
+            operation_ts TIMESTAMP_LTZ(3) METADATA FROM 'op_ts' VIRTUAL,
+            PRIMARY KEY (id) NOT ENFORCED
+        ) WITH (
+            'connector' = 'postgres-cdc',
+            'hostname' = 'db.data-catalog-app.svc.cluster.local',
+            'port' = '5432',
+            'username' = 'postgres',
+            'password' = 'postgres',
+            'database-name' = 'catalogdb',
+            'schema-name' = 'public',
+            'table-name' = 'category',
+            'slot.name' = 'category_slot',
+            'decoding.plugin.name' = 'pgoutput'
+        );
+    """)
+
+sink_ddl = """
+  CREATE TABLE kafka_sink (
+    id INT,
+    data MAP<STRING, STRING>,
+    db_name STRING,
+    schema_name STRING,
+    table_name STRING,
+    operation_ts TIMESTAMP_LTZ(3),
+    env STRING,
+    PRIMARY KEY (id, db_name, schema_name, table_name) NOT ENFORCED
+  ) WITH (
+      'connector' = 'upsert-kafka',
+      'topic' = 'catalog-cdc',
+      'properties.bootstrap.servers' = 'redpanda.default.svc.cluster.local:9093',
+      'key.format' = 'json',
+      'value.format' = 'json'
+  );
+"""
+
+table_env.execute_sql(sink_ddl)
+
+statement_set = table_env.create_statement_set()
+statement_set.add_insert_sql("""
+    INSERT INTO kafka_sink
+    SELECT 
+        id,
+        MAP[
+            'name', name, 
+            'description', description, 
+            'category_id', category_id,
+            'last_updated', CAST(last_updated AS STRING)
+        ] AS data,
+        db_name,
+        schema_name,                                           
+        table_name,
+        operation_ts,                      
+        'dev' AS env
+    FROM catalog_item;
+""")
+
+
+
+statement_set.add_insert_sql("""
+INSERT INTO kafka_sink
+SELECT 
+    id,
+    MAP[
+        'name', name, 
+        'description', description
+    ] AS data, 
+    db_name,
+    schema_name,                                           
+    table_name,
+    operation_ts,
+    'dev' AS env
+FROM category;
+""")
+statement_set.execute()
+
+
+
+

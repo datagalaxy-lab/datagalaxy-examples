@@ -1,0 +1,142 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: data-catalog-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+      annotations:
+        prometheus.io/scrape: "true"     # Tells Prometheus to scrape metrics from this pod.
+        prometheus.io/port: "9187"
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "catalogdb"
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-custom-config
+          mountPath: /etc/postgresql/custom.conf
+          subPath: custom.conf
+        args:
+          - "-c"
+          - "config_file=/etc/postgresql/custom.conf"
+      - name: postgres-exporter
+        image: wrouesnel/postgres_exporter:v0.8.0  # Use a stable version or update to your preferred tag.
+        ports:
+        - containerPort: 9187
+          name: metrics
+        env:
+        - name: DATA_SOURCE_NAME
+          value: "postgresql://postgres:postgres@localhost:5432/catalogdb?sslmode=disable"
+      volumes:
+      - name: pgdata
+        emptyDir: {}  # For production, replace with a PersistentVolumeClaim.
+      - name: postgres-custom-config
+        configMap:
+          name: postgres-config
+
+#Backend (Flask) Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: data-catalog-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: library/app-backend:1.0  # Replace with your actual backend image
+        ports:
+        - containerPort: 5000
+        env:
+        - name: SQLALCHEMY_DATABASE_URI
+          value: "postgresql://postgres:postgres@db:5432/catalogdb"
+        # If you need to mount local code during development, you could use hostPath volumes.
+        # volumeMounts:
+        # - name: backend-code
+        #   mountPath: /app
+      # volumes:
+      # - name: backend-code
+      #   hostPath:
+      #     path: /path/to/local/backend  # Update as needed
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: data-catalog-app
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+---
+# Frontend (React) Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: data-catalog-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: library/app-frontend:1.0  # Replace with your actual frontend image
+        ports:
+        - containerPort: 3000 
+        env:
+        - name: CHOKIDAR_USEPOLLING
+          value: "true"
+        command: ["npm", "start"]
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: data-catalog-app
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer
