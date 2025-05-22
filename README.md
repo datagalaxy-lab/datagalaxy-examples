@@ -32,8 +32,8 @@ Welcome to the **DataGalaxy Demos** repository! This repo hosts hands‑on proje
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-org/datagalaxy-demos.git
-   cd datagalaxy-demos
+   git clone https://github.com/datagalaxy-lab/datagalaxy-examples.git
+   cd datagalaxy-examples
    ```
 
 2. **Navigate to a project folder**
